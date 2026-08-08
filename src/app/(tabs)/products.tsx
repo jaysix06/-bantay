@@ -1,9 +1,5 @@
-import { Text, View } from 'react-native';
+import { PricesScreen } from '@/screens/prices';
 
 export default function ProductsRoute() {
-  return (
-    <View>
-      <Text>Prices</Text>
-    </View>
-  );
+  return <PricesScreen />;
 }

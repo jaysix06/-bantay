@@ -4,6 +4,8 @@ import {
   formatPrice,
   mapOpenFoodFactsProduct,
   normalizeBarcode,
+  normalizeScannedBarcode,
+  parsePriceInput,
   searchProducts,
   type Product,
 } from '@/domain/product';
@@ -38,9 +40,25 @@ describe('normalizeBarcode', () => {
   });
 });
 
+describe('normalizeScannedBarcode', () => {
+  it('accepts numeric retail codes without stripping alphanumeric payloads', () => {
+    expect(normalizeScannedBarcode('4800012345678')).toBe('4800012345678');
+    expect(normalizeScannedBarcode('ABC123456')).toBeNull();
+  });
+});
+
 describe('formatPrice', () => {
   it('formats centavos as a Philippine peso price', () => {
     expect(formatPrice(1850)).toBe('₱18.50');
+  });
+});
+
+describe('parsePriceInput', () => {
+  it('converts a peso input into whole centavos and rejects invalid prices', () => {
+    expect(parsePriceInput('18.50')).toBe(1850);
+    expect(parsePriceInput('₱ 62')).toBe(6200);
+    expect(parsePriceInput('-1')).toBeNull();
+    expect(parsePriceInput('free')).toBeNull();
   });
 });
 
@@ -70,5 +88,15 @@ describe('mapOpenFoodFactsProduct', () => {
       priceCentavos: null,
       source: 'open_food_facts',
     });
+  });
+
+  it('bounds untrusted catalog text and accepts only HTTPS image URLs', () => {
+    const product = mapOpenFoodFactsProduct('4801234567890', {
+      product_name: 'A'.repeat(500),
+      image_front_url: 'http://example.com/product.jpg',
+    });
+
+    expect(product.name).toHaveLength(120);
+    expect(product.imageUrl).toBeNull();
   });
 });

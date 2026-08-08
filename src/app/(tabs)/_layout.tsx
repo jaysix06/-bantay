@@ -14,7 +14,7 @@ export default function TabsLayout() {
         headerTitleStyle: { fontFamily: 'Montserrat_700Bold' },
         headerTintColor: theme.colors.text,
         sceneStyle: { backgroundColor: theme.colors.background },
-        tabBarActiveTintColor: theme.colors.primary,
+        tabBarActiveTintColor: theme.colors.navigationActive,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
@@ -47,6 +47,7 @@ export default function TabsLayout() {
         name="products"
         options={{
           title: 'Prices',
+          headerTitle: 'Saved prices',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="tag-outline" color={color} size={size} />
           ),

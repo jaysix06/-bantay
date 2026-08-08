@@ -1,0 +1,26 @@
+{
+  "title": "Choose Bantay's operating world",
+  "question": "Keep the grounded direction, take the strongest alternate, re-roll, or steer it.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Living Price Label",
+      "kicker": "RECOMMENDED DIRECTION",
+      "lineage": "sari-sari shelf labels, owner price notes, and the Android camera viewfinder",
+      "body": "The scanner is the working surface. A successful scan resolves into one large, unmistakable cream-and-orange price label; stock, sync, and last-updated details behave like precise owner annotations. Material 3 controls keep it native and trustworthy. The puppy appears only when guidance or reassurance is useful. Risk: literal label shapes could become decorative cards, so the system uses one dominant label only where price is the task.",
+      "hero": "C:/Users/Administrator/Downloads/ChatGPT Image Aug 7, 2026, 01_48_25 AM.png"
+    },
+    {
+      "id": "challenger-transit",
+      "label": "Store Route Map",
+      "kicker": "STRONG ALTERNATE",
+      "lineage": "midnight transit diagrams fused with the scan-to-sale journey",
+      "body": "Scan, identify, price, and record become a disciplined route with clear stations and exceptional state visibility. It is strong for process clarity, but its dark metropolitan language identifies less naturally with a warm neighborhood sari-sari store.",
+      "hero": "https://impeccable.style/worlds/cards/wayfinding-cartography-signage-midnight-transit-diagram-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/wayfinding-cartography-signage-midnight-transit-diagram.webp"
+    }
+  ],
+  "reroll": true,
+  "canon": true,
+  "steer": true
+}

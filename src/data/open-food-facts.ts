@@ -14,13 +14,24 @@ export async function fetchProductFromOpenFoodFacts(
   signal?: AbortSignal,
 ): Promise<ProductDraft | null> {
   const fields = 'product_name,brands,quantity,image_front_url';
-  const response = await fetch(
-    `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${fields}`,
-    {
-      headers: { Accept: 'application/json' },
-      signal,
-    },
-  );
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  const timeout = setTimeout(abort, 8_000);
+  signal?.addEventListener('abort', abort, { once: true });
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${fields}`,
+      {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      },
+    );
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', abort);
+  }
 
   if (!response.ok) {
     throw new Error('Product lookup is unavailable right now.');

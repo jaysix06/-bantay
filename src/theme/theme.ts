@@ -10,6 +10,7 @@ export type AppTheme = {
     text: string;
     textMuted: string;
     primary: string;
+    navigationActive: string;
     onPrimary: string;
     priceLabel: string;
     priceLabelBorder: string;
@@ -32,6 +33,7 @@ const lightTheme: AppTheme = {
     text: '#3F1D0D',
     textMuted: '#765B4B',
     primary: '#FFC269',
+    navigationActive: '#7A4100',
     onPrimary: '#321608',
     priceLabel: '#FFE7BE',
     priceLabelBorder: '#E69729',
@@ -54,6 +56,7 @@ const darkTheme: AppTheme = {
     text: '#FFF1D9',
     textMuted: '#D9BFA3',
     primary: '#FFC269',
+    navigationActive: '#FFC269',
     onPrimary: '#321608',
     priceLabel: '#FFC45F',
     priceLabelBorder: '#FFDDA5',

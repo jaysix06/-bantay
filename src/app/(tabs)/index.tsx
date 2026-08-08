@@ -1,9 +1,5 @@
-import { Text, View } from 'react-native';
+import { ScannerScreen } from '@/screens/scanner';
 
 export default function ScanRoute() {
-  return (
-    <View>
-      <Text>Scanner</Text>
-    </View>
-  );
+  return <ScannerScreen />;
 }

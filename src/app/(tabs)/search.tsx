@@ -1,9 +1,5 @@
-import { Text, View } from 'react-native';
+import { SearchScreen } from '@/screens/search';
 
 export default function SearchRoute() {
-  return (
-    <View>
-      <Text>Search</Text>
-    </View>
-  );
+  return <SearchScreen />;
 }

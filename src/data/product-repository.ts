@@ -70,7 +70,8 @@ export async function searchStoredProducts(
          OR products.brand LIKE ? COLLATE NOCASE
          OR products.quantity LIKE ? COLLATE NOCASE
          OR products.barcode LIKE ?
-      ORDER BY products.name COLLATE NOCASE`,
+      ORDER BY products.name COLLATE NOCASE
+      LIMIT 200`,
     search,
     search,
     search,
@@ -79,42 +80,79 @@ export async function searchStoredProducts(
   return rows.map(rowToProduct);
 }
 
-export async function saveProductWithPrice(
+export class DuplicateBarcodeError extends Error {
+  constructor() {
+    super('A product with this barcode already exists.');
+    this.name = 'DuplicateBarcodeError';
+  }
+}
+
+async function writeProductWithPrice(
   db: SQLiteDatabase,
   product: ProductDraft,
   priceCentavos: number,
+  mode: 'create' | 'update',
 ): Promise<void> {
   const updatedAt = new Date().toISOString();
 
   await db.withTransactionAsync(async () => {
+    if (mode === 'create') {
+      await db.runAsync(
+        `INSERT INTO products (barcode, name, brand, quantity, image_url, source, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        product.barcode,
+        product.name,
+        product.brand,
+        product.quantity,
+        product.imageUrl,
+        product.source,
+        updatedAt,
+      );
+      await db.runAsync(
+        `INSERT INTO store_prices (barcode, price_centavos, updated_at)
+         VALUES (?, ?, ?)`,
+        product.barcode,
+        priceCentavos,
+        updatedAt,
+      );
+      return;
+    }
+
     await db.runAsync(
-      `INSERT INTO products (barcode, name, brand, quantity, image_url, source, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(barcode) DO UPDATE SET
-         name = excluded.name,
-         brand = excluded.brand,
-         quantity = excluded.quantity,
-         image_url = excluded.image_url,
-         source = excluded.source,
-         updated_at = excluded.updated_at`,
-      product.barcode,
+      `UPDATE products SET name = ?, brand = ?, quantity = ?, image_url = ?, source = ?, updated_at = ?
+       WHERE barcode = ?`,
       product.name,
       product.brand,
       product.quantity,
       product.imageUrl,
       product.source,
       updatedAt,
-    );
-
-    await db.runAsync(
-      `INSERT INTO store_prices (barcode, price_centavos, updated_at)
-       VALUES (?, ?, ?)
-       ON CONFLICT(barcode) DO UPDATE SET
-         price_centavos = excluded.price_centavos,
-         updated_at = excluded.updated_at`,
       product.barcode,
+    );
+    await db.runAsync(
+      `UPDATE store_prices SET price_centavos = ?, updated_at = ? WHERE barcode = ?`,
       priceCentavos,
       updatedAt,
+      product.barcode,
     );
   });
+}
+
+export async function createProductWithPrice(
+  db: SQLiteDatabase,
+  product: ProductDraft,
+  priceCentavos: number,
+): Promise<void> {
+  if (await findProductByBarcode(db, product.barcode)) {
+    throw new DuplicateBarcodeError();
+  }
+  await writeProductWithPrice(db, product, priceCentavos, 'create');
+}
+
+export async function updateProductWithPrice(
+  db: SQLiteDatabase,
+  product: ProductDraft,
+  priceCentavos: number,
+): Promise<void> {
+  await writeProductWithPrice(db, product, priceCentavos, 'update');
 }
