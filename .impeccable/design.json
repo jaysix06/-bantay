@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-09T02:55:00+08:00",
+  "title": "Design System: Bantay",
+  "extensions": {
+    "colorMeta": {
+      "bantay-gold": {
+        "role": "primary",
+        "displayName": "Bantay Gold",
+        "canonical": "hsl(35, 100%, 71%)",
+        "tonalRamp": ["hsl(35, 100%, 90%)", "hsl(35, 100%, 85%)", "hsl(35, 100%, 71%)"]
+      },
+      "daylight": {
+        "role": "neutral",
+        "displayName": "Daylight",
+        "canonical": "#ffffff"
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Warm Night",
+        "canonical": "hsl(35, 40%, 5%)",
+        "tonalRamp": ["hsl(35, 40%, 5%)", "hsl(35, 40%, 8%)", "hsl(35, 40%, 15%)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Price Display",
+        "purpose": "The owner-set selling price only."
+      },
+      "body": {
+        "displayName": "Store UI",
+        "purpose": "Product information and operational guidance."
+      }
+    },
+    "shadows": [
+      {
+        "name": "active-label",
+        "value": "0 8dp 24dp rgba(64, 32, 12, 0.12)",
+        "purpose": "Only the active lookup result or floating primary action."
+      }
+    ],
+    "motion": [
+      {
+        "name": "scan-resolve",
+        "value": "Material emphasized decelerate, 320ms",
+        "purpose": "Transforms the scan reticle into the living price label."
+      },
+      {
+        "name": "state-change",
+        "value": "Material standard, 180ms",
+        "purpose": "Theme-safe control and status transitions."
+      }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "0-599dp" },
+      { "name": "medium", "value": "600-839dp" },
+      { "name": "expanded", "value": "840dp+" }
+    ],
+    "rules": [
+      "Price is the first readable fact after lookup.",
+      "Use semantic theme roles; never hard-code theme colors inside screens.",
+      "Mascot is contextual guidance, not routine chrome.",
+      "Cards exist only when the container itself is the interaction."
+    ]
+  }
+}
