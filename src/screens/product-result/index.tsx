@@ -1,12 +1,14 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/components/app-button';
 import { PriceLabel } from '@/components/price-label';
+import { ProductResultAction, ProductResultHeader } from '@/components/product-result-chrome';
 import { ScreenState } from '@/components/screen-state';
+import { cacheCatalogProduct, findCachedCatalogProduct } from '@/data/catalog-repository';
 import { fetchProductFromOpenFoodFacts } from '@/data/open-food-facts';
 import { findProductByBarcode } from '@/data/product-repository';
 import { normalizeBarcode, type Product, type ProductDraft } from '@/domain/product';
@@ -23,6 +25,7 @@ type LookupState =
 export function ProductResultScreen() {
   const theme = useAppTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const db = useSQLiteContext();
   const params = useLocalSearchParams<{ barcode: string }>();
   const barcode = normalizeBarcode(params.barcode ?? '');
@@ -40,6 +43,7 @@ export function ProductResultScreen() {
     const controller = new AbortController();
 
     async function lookup() {
+      let hasStaleCachedProduct = false;
       let local: Product | null;
       try {
         local = await findProductByBarcode(db, validBarcode);
@@ -53,14 +57,28 @@ export function ProductResultScreen() {
       }
 
       try {
-        const external = await fetchProductFromOpenFoodFacts(validBarcode, controller.signal);
-        setState(
-          external
-            ? { status: 'external', product: external }
-            : { status: 'missing', barcode: validBarcode, offline: false },
-        );
+        const cached = await findCachedCatalogProduct(validBarcode);
+        if (cached) {
+          setState({ status: 'external', product: cached.product });
+          if (!cached.isStale) return;
+          hasStaleCachedProduct = true;
+        }
       } catch {
-        if (!controller.signal.aborted) {
+        // A cloud cache miss must never block the direct catalog fallback.
+      }
+
+      try {
+        const lookup = await fetchProductFromOpenFoodFacts(validBarcode, controller.signal);
+        if (lookup) {
+          setState({ status: 'external', product: lookup.product });
+          void cacheCatalogProduct(lookup).catch(() => undefined);
+        } else {
+          if (!hasStaleCachedProduct) {
+            setState({ status: 'missing', barcode: validBarcode, offline: false });
+          }
+        }
+      } catch {
+        if (!controller.signal.aborted && !hasStaleCachedProduct) {
           setState({ status: 'missing', barcode: validBarcode, offline: true });
         }
       }
@@ -158,44 +176,52 @@ export function ProductResultScreen() {
 
   if (state.status === 'external') {
     return (
-      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
-        <View style={[styles.foundOnline, { backgroundColor: theme.colors.surfaceMuted }]}>
-          <MaterialCommunityIcons name="cloud-check-outline" size={30} color={theme.colors.success} />
-          <View style={styles.foundCopy}>
-            <Text selectable style={[styles.foundTitle, { color: theme.colors.text }]}>
-              Product found online
-            </Text>
-            <Text selectable style={[styles.foundBody, { color: theme.colors.textMuted }]}>
-              General details came from Open Food Facts. Your store price is still yours to set.
-            </Text>
-          </View>
-        </View>
-        <View style={styles.externalProduct}>
-          <Text selectable style={[styles.externalName, { color: theme.colors.text }]}>
-            {state.product.name}
-          </Text>
-          <Text selectable style={[styles.externalMeta, { color: theme.colors.textMuted }]}>
-            {[state.product.brand, state.product.quantity].filter(Boolean).join(' · ') || state.product.barcode}
-          </Text>
-        </View>
-        <AppButton label="Set store price" onPress={() => openProductForm(state.product)} />
-        <AppButton label="Scan another" variant="secondary" onPress={() => router.replace('/(tabs)')} />
-      </ScrollView>
+      <>
+        <ScrollView
+          contentInsetAdjustmentBehavior="never"
+          contentContainerStyle={[
+            styles.resultContent,
+            { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 },
+          ]}
+        >
+          <ProductResultHeader onMenuPress={() => router.replace('/(tabs)')} />
+          <PriceLabel product={state.product} />
+          <AppButton label="Set store price" onPress={() => openProductForm(state.product)} />
+          <ProductResultAction
+            icon="barcode-scan"
+            title="Scan another"
+            subtitle="Use the camera to scan a barcode"
+            onPress={() => router.replace('/(tabs)')}
+          />
+        </ScrollView>
+      </>
     );
   }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
-      <PriceLabel product={state.product} />
-      <View style={styles.actions}>
-        <AppButton
-          label="Scan another"
-          icon={
-            <MaterialCommunityIcons name="barcode-scan" size={22} color={theme.colors.onPrimary} />
-          }
+    <>
+      <ScrollView
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={[
+          styles.resultContent,
+          { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 },
+        ]}
+      >
+        <ProductResultHeader onMenuPress={() => router.replace('/(tabs)')} />
+        <PriceLabel product={state.product} />
+        <View style={styles.actions}>
+        <ProductResultAction
+          icon="barcode-scan"
+          title="Scan another"
+          subtitle="Use the camera to scan a barcode"
           onPress={() => router.replace('/(tabs)')}
         />
-        <AppButton label="Search products" variant="secondary" onPress={() => router.replace('/search')} />
+        <ProductResultAction
+          icon="magnify"
+          title="Search products"
+          subtitle="Find products by name"
+          onPress={() => router.replace('/search')}
+        />
         <AppButton
           label="Edit saved price"
           variant="text"
@@ -206,28 +232,22 @@ export function ProductResultScreen() {
             )
           }
         />
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, gap: 24, padding: 20 },
+  resultContent: {
+    flexGrow: 1,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    gap: 16,
+    paddingHorizontal: 18,
+  },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 },
   loadingText: { fontFamily: 'Montserrat_600SemiBold', fontSize: 15 },
-  actions: { gap: 12 },
-  foundOnline: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    borderRadius: 18,
-    borderCurve: 'continuous',
-    padding: 18,
-  },
-  foundCopy: { flex: 1, gap: 5 },
-  foundTitle: { fontFamily: 'Montserrat_700Bold', fontSize: 16 },
-  foundBody: { fontFamily: 'Montserrat_500Medium', fontSize: 13, lineHeight: 20 },
-  externalProduct: { flex: 1, justifyContent: 'center', gap: 8, paddingVertical: 32 },
-  externalName: { fontFamily: 'Montserrat_800ExtraBold', fontSize: 30, lineHeight: 37 },
-  externalMeta: { fontFamily: 'Montserrat_500Medium', fontSize: 15, lineHeight: 22 },
+  actions: { gap: 0 },
 });

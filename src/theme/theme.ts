@@ -35,7 +35,7 @@ const lightTheme: AppTheme = {
     primary: '#FFC269',
     navigationActive: '#7A4100',
     onPrimary: '#321608',
-    priceLabel: '#FFE7BE',
+    priceLabel: '#FFC45F',
     priceLabelBorder: '#E69729',
     border: '#E8D5BD',
     cameraChrome: '#FFF7E8',

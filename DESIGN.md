@@ -113,7 +113,7 @@ Primary buttons are 56dp tall, gold, dark-ink, and semibold. Pressed state deepe
 
 ### Price Label
 
-The product name anchors the top, the price dominates the center, and source/update status closes the label. It may transform out of the scan reticle, but it never becomes decorative chrome around unrelated content.
+The branded puppy header introduces a full gold merchandise-tag silhouette. Brand, product name, and package size anchor the top; the price dominates the center; and a contrasting barcode/source strip plus timestamp closes the label. Plain scan and search rows follow beneath it. The composition must remain equivalent in light and dark themes and never become decorative chrome around unrelated content.
 
 ### Inputs
 

@@ -65,6 +65,11 @@ export function parsePriceInput(value: string): number | null {
   return Number.isSafeInteger(centavos) ? centavos : null;
 }
 
+export function parseProductTimestamp(value: string): Date | null {
+  const timestamp = new Date(value);
+  return Number.isNaN(timestamp.getTime()) ? null : timestamp;
+}
+
 export function searchProducts(products: Product[], query: string): Product[] {
   const normalizedQuery = query.trim().toLocaleLowerCase('en-PH');
 

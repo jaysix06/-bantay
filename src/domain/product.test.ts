@@ -6,6 +6,7 @@ import {
   normalizeBarcode,
   normalizeScannedBarcode,
   parsePriceInput,
+  parseProductTimestamp,
   searchProducts,
   type Product,
 } from '@/domain/product';
@@ -59,6 +60,15 @@ describe('parsePriceInput', () => {
     expect(parsePriceInput('₱ 62')).toBe(6200);
     expect(parsePriceInput('-1')).toBeNull();
     expect(parsePriceInput('free')).toBeNull();
+  });
+});
+
+describe('parseProductTimestamp', () => {
+  it('accepts valid timestamps and rejects malformed catalog values', () => {
+    expect(parseProductTimestamp('2026-08-09T00:00:00.000Z')?.toISOString()).toBe(
+      '2026-08-09T00:00:00.000Z',
+    );
+    expect(parseProductTimestamp('not-a-date')).toBeNull();
   });
 });
 

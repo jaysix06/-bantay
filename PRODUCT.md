@@ -33,6 +33,7 @@ Bantay is not an inventory dashboard or a point-of-sale system. Its distinctive 
 - The primary flow is **Scan → View price**.
 - Known barcodes resolve from Bantay's own database first.
 - Unknown barcodes fall back to Open Food Facts for general product details, then require the owner to enter the store's selling price.
+- Successful Open Food Facts responses are cached in a shared Firestore catalog even when the user does not save a store price, so later scans can avoid another external request.
 - If external lookup fails or the internet is unavailable, the user can register the product manually or enter its barcode manually.
 - Product search provides a fallback when a barcode cannot be scanned.
 
@@ -45,6 +46,7 @@ Bantay is not an inventory dashboard or a point-of-sale system. Its distinctive 
 - Cloud synchronization across family devices.
 - Barcode values uniquely identify product/package-size records and must not create duplicates.
 - Imported general product data remains separate from the store-specific selling price.
+- Firestore catalog documents retain the complete bounded Open Food Facts payload requested by Bantay, its provenance, and fetch timestamp.
 - External data never overwrites owner-entered prices or other store-specific values.
 - Price-update timestamps and imported-data provenance are retained.
 - Sales recording, stock and inventory tracking, purchase cost, carts, payment processing, cash/change calculation, full POS behavior, iPhone, web, and commercial-scale features are outside the MVP.
