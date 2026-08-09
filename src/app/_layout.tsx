@@ -10,6 +10,7 @@ import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import '@/data/firebase';
 import { initializeDatabase } from '@/data/database';
 import { AppThemeProvider, useAppTheme } from '@/theme/theme-provider';
 
