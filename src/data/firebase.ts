@@ -1,4 +1,5 @@
 import { getApp, getApps, initializeApp, type FirebaseApp, type FirebaseOptions } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
 type FirebaseEnvironment = {
@@ -42,6 +43,7 @@ export const firebaseApp: FirebaseApp | null = firebaseConfig
   : null;
 
 export const firestore: Firestore | null = firebaseApp ? getFirestore(firebaseApp) : null;
+export const firebaseAuth: Auth | null = firebaseApp ? getAuth(firebaseApp) : null;
 
 export function requireFirestore(): Firestore {
   if (!firestore) {

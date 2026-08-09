@@ -109,4 +109,13 @@ describe('mapOpenFoodFactsProduct', () => {
     expect(product.name).toHaveLength(120);
     expect(product.imageUrl).toBeNull();
   });
+
+  it('uses the small Open Food Facts front image when the full image is unavailable', () => {
+    const product = mapOpenFoodFactsProduct('4801234567890', {
+      product_name: 'Example Crackers',
+      image_front_small_url: 'https://images.openfoodfacts.org/example-small.jpg',
+    });
+
+    expect(product.imageUrl).toBe('https://images.openfoodfacts.org/example-small.jpg');
+  });
 });

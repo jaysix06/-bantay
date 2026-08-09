@@ -4,6 +4,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
+import { useAuth } from '@/auth/auth-provider';
 import { AppButton } from '@/components/app-button';
 import { ProductRow } from '@/components/product-row';
 import { listProducts } from '@/data/product-repository';
@@ -14,6 +15,7 @@ export function PricesScreen() {
   const theme = useAppTheme();
   const router = useRouter();
   const db = useSQLiteContext();
+  const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -74,6 +76,18 @@ export function PricesScreen() {
               These are the prices saved by the store owner and available offline.
             </Text>
           </View>
+          <View
+            style={[
+              styles.account,
+              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+            ]}
+          >
+            <View style={styles.accountCopy}>
+              <Text selectable numberOfLines={1} style={[styles.accountLabel, { color: theme.colors.textMuted }]}>SIGNED IN</Text>
+              <Text selectable numberOfLines={1} style={[styles.accountEmail, { color: theme.colors.text }]}>{user?.email ?? 'Google account'}</Text>
+            </View>
+            <AppButton label="Sign out" variant="text" onPress={() => void signOut()} />
+          </View>
           <AppButton
             label="Add product"
             icon={
@@ -115,6 +129,10 @@ const styles = StyleSheet.create({
   copy: { gap: 8 },
   title: { fontFamily: 'Montserrat_800ExtraBold', fontSize: 27, lineHeight: 34 },
   body: { fontFamily: 'Montserrat_500Medium', fontSize: 14, lineHeight: 22 },
+  account: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 16, borderCurve: 'continuous', paddingLeft: 16, paddingRight: 4 },
+  accountCopy: { flex: 1, gap: 3 },
+  accountLabel: { fontFamily: 'Montserrat_700Bold', fontSize: 10, letterSpacing: 1.1 },
+  accountEmail: { fontFamily: 'Montserrat_600SemiBold', fontSize: 13 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 28 },
   emptyIcon: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontFamily: 'Montserrat_700Bold', fontSize: 20, textAlign: 'center' },

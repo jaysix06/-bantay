@@ -1,6 +1,6 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ProductImage } from '@/components/product-image';
 import { formatPrice, type Product } from '@/domain/product';
 import { useAppTheme } from '@/theme/theme-provider';
 
@@ -18,9 +18,11 @@ export function ProductRow({ product, onPress }: { product: Product; onPress: ()
         pressed && { backgroundColor: theme.colors.surfaceMuted },
       ]}
     >
-      <View style={[styles.icon, { backgroundColor: theme.colors.surfaceMuted }]}>
-        <MaterialCommunityIcons name="tag-outline" size={24} color={theme.colors.primary} />
-      </View>
+      <ProductImage
+        imageUrl={product.imageUrl}
+        productName={product.name}
+        variant="thumbnail"
+      />
       <View style={styles.copy}>
         <Text selectable numberOfLines={2} style={[styles.name, { color: theme.colors.text }]}>
           {product.name}
@@ -47,7 +49,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     paddingVertical: 12,
   },
-  icon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, gap: 4 },
   name: { fontFamily: 'Montserrat_700Bold', fontSize: 15, lineHeight: 20 },
   meta: { fontFamily: 'Montserrat_500Medium', fontSize: 12, lineHeight: 17 },

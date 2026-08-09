@@ -8,10 +8,14 @@
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.bantay.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#FFC06B"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "bundler": "metro"
@@ -26,11 +30,18 @@
           "barcodeScannerEnabled": true
         }
       ],
+      "@react-native-google-signin/google-signin",
       "expo-sqlite",
       "expo-splash-screen"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4e34fcd8-e34b-4b73-b002-39e84d576ba4"
+      }
     }
   }
 }

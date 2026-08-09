@@ -9,9 +9,12 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { AuthProvider, useAuth } from '@/auth/auth-provider';
 import '@/data/firebase';
 import { initializeDatabase } from '@/data/database';
+import { LoginScreen } from '@/screens/login';
 import { AppThemeProvider, useAppTheme } from '@/theme/theme-provider';
 
 void SplashScreen.preventAutoHideAsync();
@@ -53,6 +56,22 @@ function Navigation() {
   );
 }
 
+function AuthGate() {
+  const theme = useAppTheme();
+  const { isReady, user } = useAuth();
+
+  if (!isReady) {
+    return (
+      <View style={[styles.loading, { backgroundColor: theme.colors.background }]}>
+        <StatusBar style={theme.isDark ? 'light' : 'dark'} />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  return user ? <Navigation /> : <LoginScreen />;
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Montserrat_500Medium,
@@ -74,8 +93,14 @@ export default function RootLayout() {
   return (
     <SQLiteProvider databaseName="bantay.db" onInit={initializeDatabase}>
       <AppThemeProvider>
-        <Navigation />
+        <AuthProvider>
+          <AuthGate />
+        </AuthProvider>
       </AppThemeProvider>
     </SQLiteProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+});

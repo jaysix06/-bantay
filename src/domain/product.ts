@@ -20,6 +20,7 @@ export type OpenFoodFactsProduct = {
   brands?: string;
   quantity?: string;
   image_front_url?: string;
+  image_front_small_url?: string;
 };
 
 function cleanOptionalText(value: string | undefined, maxLength: number): string | null {
@@ -93,7 +94,9 @@ export function mapOpenFoodFactsProduct(
     name: cleanOptionalText(external.product_name, 120) || 'Unknown product',
     brand: cleanOptionalText(external.brands, 80),
     quantity: cleanOptionalText(external.quantity, 40),
-    imageUrl: cleanImageUrl(external.image_front_url),
+    imageUrl:
+      cleanImageUrl(external.image_front_url) ??
+      cleanImageUrl(external.image_front_small_url),
     priceCentavos: null,
     source: 'open_food_facts',
     updatedAt: new Date().toISOString(),

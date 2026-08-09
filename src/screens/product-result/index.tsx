@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/components/app-button';
 import { PriceLabel } from '@/components/price-label';
+import { ProductImage } from '@/components/product-image';
 import { ProductResultAction, ProductResultHeader } from '@/components/product-result-chrome';
 import { ScreenState } from '@/components/screen-state';
 import { cacheCatalogProduct, findCachedCatalogProduct } from '@/data/catalog-repository';
@@ -185,6 +186,7 @@ export function ProductResultScreen() {
           ]}
         >
           <ProductResultHeader onMenuPress={() => router.replace('/(tabs)')} />
+          <ProductImage imageUrl={state.product.imageUrl} productName={state.product.name} />
           <PriceLabel product={state.product} />
           <AppButton label="Set store price" onPress={() => openProductForm(state.product)} />
           <ProductResultAction
@@ -208,6 +210,7 @@ export function ProductResultScreen() {
         ]}
       >
         <ProductResultHeader onMenuPress={() => router.replace('/(tabs)')} />
+        <ProductImage imageUrl={state.product.imageUrl} productName={state.product.name} />
         <PriceLabel product={state.product} />
         <View style={styles.actions}>
         <ProductResultAction
