@@ -6,12 +6,14 @@ import { useAppTheme } from '@/theme/theme-provider';
 type AppButtonProps = ComponentProps<typeof Pressable> & {
   label: string;
   icon?: React.ReactNode;
+  balancedIcon?: boolean;
   variant?: 'primary' | 'secondary' | 'text';
 };
 
 export function AppButton({
   label,
   icon,
+  balancedIcon = false,
   variant = 'primary',
   disabled,
   ...pressableProps
@@ -27,6 +29,7 @@ export function AppButton({
       {...pressableProps}
       style={({ pressed }) => [
         styles.button,
+        balancedIcon && styles.balancedButton,
         isPrimary && { backgroundColor: theme.colors.primary },
         !isPrimary && !isText && {
           backgroundColor: theme.colors.surfaceMuted,
@@ -38,16 +41,18 @@ export function AppButton({
         disabled && styles.disabled,
       ]}
     >
-      <View style={styles.content}>
-        {icon}
+      <View style={[styles.content, balancedIcon && styles.balancedContent]}>
+        {balancedIcon ? <View style={styles.iconSlot}>{icon}</View> : icon}
         <Text
           style={[
             styles.label,
+            balancedIcon && styles.balancedLabel,
             { color: isPrimary ? theme.colors.onPrimary : theme.colors.text },
           ]}
         >
           {label}
         </Text>
+        {balancedIcon ? <View aria-hidden style={styles.iconSlot} /> : null}
       </View>
     </Pressable>
   );
@@ -67,6 +72,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+  },
+  balancedButton: {
+    paddingHorizontal: 12,
+  },
+  balancedContent: {
+    width: '100%',
+    gap: 0,
+  },
+  balancedLabel: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  iconSlot: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontFamily: 'Montserrat_700Bold',

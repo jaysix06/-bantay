@@ -3,12 +3,15 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useAuth } from '@/auth/auth-provider';
 import { AppButton } from '@/components/app-button';
+import { ScreenState } from '@/components/screen-state';
 import {
   createProductWithPrice,
   DuplicateBarcodeError,
   updateProductWithPrice,
 } from '@/data/product-repository';
+import { markPriceRequestAnswered } from '@/data/price-request-repository';
 import { normalizeBarcode, parsePriceInput, type ProductSource } from '@/domain/product';
 import { useAppTheme } from '@/theme/theme-provider';
 
@@ -60,6 +63,7 @@ export function ProductFormScreen() {
   const theme = useAppTheme();
   const router = useRouter();
   const db = useSQLiteContext();
+  const { membership, syncNow, user } = useAuth();
   const params = useLocalSearchParams<{
     barcode?: string;
     name?: string;
@@ -69,8 +73,10 @@ export function ProductFormScreen() {
     source?: string;
     price?: string;
     mode?: 'create' | 'edit';
+    requestBarcode?: string;
   }>();
   const isEditing = params.mode === 'edit';
+  const isAnsweringRequest = Boolean(params.requestBarcode);
   const [barcode, setBarcode] = useState(params.barcode ?? '');
   const [name, setName] = useState(params.name ?? '');
   const [brand, setBrand] = useState(params.brand ?? '');
@@ -80,6 +86,10 @@ export function ProductFormScreen() {
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
+    if (!user || membership?.role !== 'owner') {
+      setError('Only the store owner can save products and prices.');
+      return;
+    }
     const normalizedBarcode = normalizeBarcode(barcode);
     const priceCentavos = parsePriceInput(price);
 
@@ -101,9 +111,11 @@ export function ProductFormScreen() {
     try {
       const source: ProductSource =
         params.source === 'open_food_facts' ? 'open_food_facts' : 'manual';
-      const writeProduct = isEditing ? updateProductWithPrice : createProductWithPrice;
+      const writeProduct = isEditing || isAnsweringRequest ? updateProductWithPrice : createProductWithPrice;
       await writeProduct(
         db,
+        membership.storeId,
+        user.uid,
         {
           barcode: normalizedBarcode,
           name: name.trim(),
@@ -116,6 +128,10 @@ export function ProductFormScreen() {
         },
         priceCentavos,
       );
+      await syncNow();
+      if (params.requestBarcode) {
+        await markPriceRequestAnswered(membership.storeId, params.requestBarcode).catch(() => undefined);
+      }
       router.replace({ pathname: '/product/[barcode]', params: { barcode: normalizedBarcode } });
     } catch (saveError) {
       setError(
@@ -128,6 +144,18 @@ export function ProductFormScreen() {
     }
   };
 
+  if (membership?.role !== 'owner') {
+    return (
+      <ScreenState
+        icon="shield-lock-outline"
+        title="Owner access required"
+        body="Bantay accounts can look up prices but cannot create products or change store prices."
+      >
+        <AppButton label="Go back" variant="secondary" onPress={() => router.back()} />
+      </ScreenState>
+    );
+  }
+
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
@@ -136,7 +164,7 @@ export function ProductFormScreen() {
     >
       <View style={styles.intro}>
         <Text selectable style={[styles.title, { color: theme.colors.text }]}>
-          {isEditing ? 'Edit the saved price' : "Save the owner's price"}
+          {isAnsweringRequest ? 'Answer this price request' : isEditing ? 'Edit the saved price' : "Save the owner's price"}
         </Text>
         <Text selectable style={[styles.body, { color: theme.colors.textMuted }]}>
           Product details help identify the item. The store price is always set here, never by an
@@ -150,7 +178,7 @@ export function ProductFormScreen() {
         placeholder="4801234567890"
         keyboardType="number-pad"
         maxLength={32}
-        editable={!isEditing}
+        editable={!isEditing && !isAnsweringRequest}
       />
       <FormField
         label="Product name"
@@ -187,7 +215,7 @@ export function ProductFormScreen() {
         </Text>
       ) : null}
       <AppButton
-        label={saving ? 'Saving…' : isEditing ? 'Save changes' : 'Save product'}
+        label={saving ? 'Saving…' : isAnsweringRequest ? 'Save answer' : isEditing ? 'Save changes' : 'Save product'}
         disabled={saving}
         onPress={() => void save()}
       />

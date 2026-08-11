@@ -1,5 +1,5 @@
-import { ScannerScreen } from '@/screens/scanner';
+import { HomeScreen } from '@/screens/home';
 
-export default function ScanRoute() {
-  return <ScannerScreen />;
+export default function HomeRoute() {
+  return <HomeScreen />;
 }

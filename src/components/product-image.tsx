@@ -7,13 +7,13 @@ import { useAppTheme } from '@/theme/theme-provider';
 type ProductImageProps = {
   imageUrl: string | null;
   productName: string;
-  variant?: 'hero' | 'thumbnail';
+  variant?: 'tag' | 'thumbnail';
 };
 
 export function ProductImage({
   imageUrl,
   productName,
-  variant = 'hero',
+  variant = 'tag',
 }: ProductImageProps) {
   const theme = useAppTheme();
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export function ProductImage({
     <View
       style={[
         styles.frame,
-        variant === 'hero' ? styles.hero : styles.thumbnail,
+        variant === 'tag' ? styles.tag : styles.thumbnail,
         {
           backgroundColor: hasImage ? '#FFFFFF' : theme.colors.surfaceMuted,
           borderColor: theme.colors.border,
@@ -36,13 +36,13 @@ export function ProductImage({
           source={{ uri: imageUrl! }}
           resizeMode="contain"
           onError={() => setFailedUrl(imageUrl)}
-          style={variant === 'hero' ? styles.heroImage : styles.thumbnailImage}
+          style={variant === 'tag' ? styles.tagImage : styles.thumbnailImage}
         />
       ) : (
         <MaterialCommunityIcons
           accessibilityLabel={`No image available for ${productName}`}
           name="image-outline"
-          size={variant === 'hero' ? 52 : 25}
+          size={variant === 'tag' ? 34 : 25}
           color={theme.colors.textMuted}
         />
       )}
@@ -57,12 +57,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
   },
-  hero: {
-    width: '100%',
-    height: 228,
-    borderRadius: 22,
+  tag: {
+    width: 96,
+    height: 128,
+    borderRadius: 14,
     borderCurve: 'continuous',
-    padding: 18,
+    padding: 6,
   },
   thumbnail: {
     width: 58,
@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     padding: 5,
   },
-  heroImage: { width: '100%', height: '100%' },
+  tagImage: { width: '100%', height: '100%' },
   thumbnailImage: { width: '100%', height: '100%' },
 });

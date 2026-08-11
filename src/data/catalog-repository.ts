@@ -1,22 +1,29 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import type { SQLiteDatabase } from 'expo-sqlite';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import { firestore } from '@/data/firebase';
+import {
+  completeSyncMutation,
+  enqueueSyncMutation,
+  saveCatalogProductLocally,
+} from '@/data/local-sync-repository';
+import { syncQueueId } from '@/data/store-sync';
 import type { OpenFoodFactsLookup } from '@/data/open-food-facts';
 import {
-  mapOpenFoodFactsProduct,
   normalizeScannedBarcode,
   type ProductDraft,
 } from '@/domain/product';
 
-type CatalogDocument = {
+export type CatalogDocument = {
   barcode: string;
   name: string;
   brand: string | null;
   quantity: string | null;
   imageUrl: string | null;
-  source: 'open_food_facts';
+  source: ProductDraft['source'];
   fetchedAt: string;
   openFoodFacts: Record<string, unknown>;
+  createdBy?: string;
 };
 
 export type CachedCatalogProduct = {
@@ -33,6 +40,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function buildCatalogDocument(
   lookup: OpenFoodFactsLookup,
   fetchedAt = new Date().toISOString(),
+  createdBy?: string,
 ): CatalogDocument {
   return {
     barcode: lookup.product.barcode,
@@ -43,17 +51,47 @@ export function buildCatalogDocument(
     source: 'open_food_facts',
     fetchedAt,
     openFoodFacts: lookup.openFoodFacts,
+    ...(createdBy ? { createdBy } : {}),
+  };
+}
+
+export function buildManualCatalogDocument(
+  product: ProductDraft,
+  createdBy: string,
+  fetchedAt = new Date().toISOString(),
+): CatalogDocument {
+  return {
+    barcode: product.barcode,
+    name: product.name,
+    brand: product.brand,
+    quantity: product.quantity,
+    imageUrl: product.imageUrl,
+    source: product.source,
+    fetchedAt,
+    openFoodFacts: {},
+    createdBy,
   };
 }
 
 export function parseCatalogDocument(value: unknown): ProductDraft | null {
   if (!isRecord(value)) return null;
   const barcode = typeof value.barcode === 'string' ? normalizeScannedBarcode(value.barcode) : null;
-  if (!barcode || !isRecord(value.openFoodFacts)) return null;
+  const name = typeof value.name === 'string' ? value.name.trim().slice(0, 120) : '';
+  const source = value.source === 'manual' || value.source === 'open_food_facts' ? value.source : null;
+  if (!barcode || !name || !source || !isRecord(value.openFoodFacts)) return null;
 
-  const product = mapOpenFoodFactsProduct(barcode, value.openFoodFacts);
   return {
-    ...product,
+    barcode,
+    name,
+    brand: typeof value.brand === 'string' ? value.brand.trim().slice(0, 80) || null : null,
+    quantity:
+      typeof value.quantity === 'string' ? value.quantity.trim().slice(0, 40) || null : null,
+    imageUrl:
+      typeof value.imageUrl === 'string' && value.imageUrl.startsWith('https://')
+        ? value.imageUrl.slice(0, 2048)
+        : null,
+    priceCentavos: null,
+    source,
     updatedAt:
       typeof value.fetchedAt === 'string' ? value.fetchedAt : new Date().toISOString(),
   };
@@ -80,12 +118,31 @@ export async function findCachedCatalogProduct(
   return product ? { product, isStale: isCatalogDocumentStale(data) } : null;
 }
 
-export async function cacheCatalogProduct(lookup: OpenFoodFactsLookup): Promise<boolean> {
+export async function cacheCatalogProduct(
+  db: SQLiteDatabase,
+  lookup: OpenFoodFactsLookup,
+  userId: string,
+): Promise<boolean> {
+  const document = buildCatalogDocument(lookup, new Date().toISOString(), userId);
+  await db.withTransactionAsync(async () => {
+    await saveCatalogProductLocally(db, lookup.product);
+    await enqueueSyncMutation(db, {
+      kind: 'catalog',
+      storeId: null,
+      barcode: lookup.product.barcode,
+      payload: document,
+    });
+  });
   if (!firestore) return false;
-  await setDoc(
-    doc(firestore, 'catalog_products', lookup.product.barcode),
-    buildCatalogDocument(lookup),
-    { merge: true },
-  );
-  return true;
+  try {
+    await setDoc(
+      doc(firestore, 'catalog_products', lookup.product.barcode),
+      { ...document, serverUpdatedAt: serverTimestamp() },
+      { merge: true },
+    );
+    await completeSyncMutation(db, syncQueueId('catalog', null, lookup.product.barcode));
+    return true;
+  } catch {
+    return false;
+  }
 }

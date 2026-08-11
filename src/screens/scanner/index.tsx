@@ -9,6 +9,8 @@ import { AppButton } from '@/components/app-button';
 import { normalizeScannedBarcode } from '@/domain/product';
 import { useAppTheme } from '@/theme/theme-provider';
 
+const FLOATING_TAB_BAR_CLEARANCE = 112;
+
 export function ScannerScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -124,7 +126,7 @@ export function ScannerScreen() {
           {
             backgroundColor: theme.colors.cameraOverlay,
             borderColor: 'rgba(255, 255, 255, 0.16)',
-            marginBottom: insets.bottom + 12,
+            marginBottom: insets.bottom + FLOATING_TAB_BAR_CLEARANCE,
           },
         ]}
       >

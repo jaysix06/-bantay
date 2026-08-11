@@ -1,0 +1,25 @@
+node_modules
+.expo
+.git
+dist
+web-build
+.env
+.env.*
+!.env.example
+*.pem
+*.log
+.DS_Store
+coverage
+expo-env.d.ts
+
+# Keep the native Android source, but regenerate machine-specific outputs on EAS.
+/android/.gradle
+/android/.kotlin
+/android/build
+/android/app/build
+/android/app/.cxx
+/android/local.properties
+/android/.idea
+/android/*.iml
+/android/*.hprof
+/android/**/*.jsbundle

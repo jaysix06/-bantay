@@ -25,7 +25,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Bantay to scan product barcodes.",
+          "cameraPermission": "Allow Bantay to scan product barcodes and account pairing QR codes.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }

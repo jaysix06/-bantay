@@ -4,6 +4,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useAuth } from '@/auth/auth-provider';
 import { ProductRow } from '@/components/product-row';
 import { AppButton } from '@/components/app-button';
 import { searchStoredProducts } from '@/data/product-repository';
@@ -14,6 +15,7 @@ export function SearchScreen() {
   const theme = useAppTheme();
   const router = useRouter();
   const db = useSQLiteContext();
+  const { membership, syncRevision } = useAuth();
   const [query, setQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -27,11 +29,13 @@ export function SearchScreen() {
   );
 
   useEffect(() => {
+    void syncRevision;
     let cancelled = false;
     const timeout = setTimeout(() => {
       setLoading(true);
       setError(false);
-      void searchStoredProducts(db, query)
+      if (!membership) return;
+      void searchStoredProducts(db, membership.storeId, query)
         .then((results) => {
           if (!cancelled) setProducts(results);
         })
@@ -47,7 +51,7 @@ export function SearchScreen() {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [db, query, refreshKey]);
+  }, [db, membership, query, refreshKey, syncRevision]);
 
   return (
     <FlatList

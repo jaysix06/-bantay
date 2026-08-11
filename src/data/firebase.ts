@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseApp, type FirebaseOptions } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FirebaseAuth from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
 type FirebaseEnvironment = {
@@ -43,7 +44,31 @@ export const firebaseApp: FirebaseApp | null = firebaseConfig
   : null;
 
 export const firestore: Firestore | null = firebaseApp ? getFirestore(firebaseApp) : null;
-export const firebaseAuth: Auth | null = firebaseApp ? getAuth(firebaseApp) : null;
+// Firebase's React Native runtime exports this helper, but its wrapper types omit the RN-only export.
+const getReactNativePersistence = (
+  FirebaseAuth as typeof FirebaseAuth & {
+    getReactNativePersistence: (storage: typeof AsyncStorage) => FirebaseAuth.Persistence;
+  }
+).getReactNativePersistence;
+
+function initializeFirebaseAuth(app: FirebaseApp): FirebaseAuth.Auth {
+  try {
+    return FirebaseAuth.initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch (error) {
+    const code =
+      typeof error === 'object' && error !== null
+        ? (error as { code?: unknown }).code
+        : null;
+    if (code === 'auth/already-initialized') return FirebaseAuth.getAuth(app);
+    throw error;
+  }
+}
+
+export const firebaseAuth: FirebaseAuth.Auth | null = firebaseApp
+  ? initializeFirebaseAuth(firebaseApp)
+  : null;
 
 export function requireFirestore(): Firestore {
   if (!firestore) {

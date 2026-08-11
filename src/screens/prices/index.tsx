@@ -15,7 +15,7 @@ export function PricesScreen() {
   const theme = useAppTheme();
   const router = useRouter();
   const db = useSQLiteContext();
-  const { user, signOut } = useAuth();
+  const { membership, syncRevision } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -24,10 +24,12 @@ export function PricesScreen() {
   useFocusEffect(
     useCallback(() => {
       void retryKey;
+      void syncRevision;
       let active = true;
       setLoading(true);
       setError(false);
-      void listProducts(db)
+      if (!membership) return;
+      void listProducts(db, membership.storeId)
         .then((items) => {
           if (active) setProducts(items);
         })
@@ -40,7 +42,7 @@ export function PricesScreen() {
       return () => {
         active = false;
       };
-    }, [db, retryKey]),
+    }, [db, membership, retryKey, syncRevision]),
   );
 
   const editProduct = (product: Product) => {
@@ -65,7 +67,16 @@ export function PricesScreen() {
       data={products}
       keyExtractor={(product) => product.barcode}
       contentContainerStyle={styles.content}
-      renderItem={({ item }) => <ProductRow product={item} onPress={() => editProduct(item)} />}
+      renderItem={({ item }) => (
+        <ProductRow
+          product={item}
+          onPress={() =>
+            membership?.role === 'owner'
+              ? editProduct(item)
+              : router.push({ pathname: '/product/[barcode]', params: { barcode: item.barcode } })
+          }
+        />
+      )}
       ListHeaderComponent={
         <View style={styles.header}>
           <View style={styles.copy}>
@@ -76,25 +87,15 @@ export function PricesScreen() {
               These are the prices saved by the store owner and available offline.
             </Text>
           </View>
-          <View
-            style={[
-              styles.account,
-              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-            ]}
-          >
-            <View style={styles.accountCopy}>
-              <Text selectable numberOfLines={1} style={[styles.accountLabel, { color: theme.colors.textMuted }]}>SIGNED IN</Text>
-              <Text selectable numberOfLines={1} style={[styles.accountEmail, { color: theme.colors.text }]}>{user?.email ?? 'Google account'}</Text>
-            </View>
-            <AppButton label="Sign out" variant="text" onPress={() => void signOut()} />
-          </View>
-          <AppButton
-            label="Add product"
-            icon={
-              <MaterialCommunityIcons name="plus" size={22} color={theme.colors.onPrimary} />
-            }
-            onPress={() => router.push('/product/add')}
-          />
+          {membership?.role === 'owner' ? (
+            <AppButton
+              label="Add product"
+              icon={
+                <MaterialCommunityIcons name="plus" size={22} color={theme.colors.onPrimary} />
+              }
+              onPress={() => router.push('/product/add')}
+            />
+          ) : null}
         </View>
       }
       ListEmptyComponent={
@@ -129,10 +130,6 @@ const styles = StyleSheet.create({
   copy: { gap: 8 },
   title: { fontFamily: 'Montserrat_800ExtraBold', fontSize: 27, lineHeight: 34 },
   body: { fontFamily: 'Montserrat_500Medium', fontSize: 14, lineHeight: 22 },
-  account: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 16, borderCurve: 'continuous', paddingLeft: 16, paddingRight: 4 },
-  accountCopy: { flex: 1, gap: 3 },
-  accountLabel: { fontFamily: 'Montserrat_700Bold', fontSize: 10, letterSpacing: 1.1 },
-  accountEmail: { fontFamily: 'Montserrat_600SemiBold', fontSize: 13 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 28 },
   emptyIcon: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontFamily: 'Montserrat_700Bold', fontSize: 20, textAlign: 'center' },

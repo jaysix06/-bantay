@@ -51,6 +51,31 @@ describe('catalog document conversion', () => {
     expect(parseCatalogDocument({ barcode: 'not-a-barcode', openFoodFacts: {} })).toBeNull();
   });
 
+  it('recreates a manually registered catalog product without store price duplication', () => {
+    expect(
+      parseCatalogDocument({
+        barcode: '4801234567890',
+        name: 'Sardines',
+        brand: 'Local Brand',
+        quantity: '155 g',
+        imageUrl: null,
+        source: 'manual',
+        fetchedAt: '2026-08-10T00:00:00.000Z',
+        openFoodFacts: {},
+        createdBy: 'owner-uid',
+      }),
+    ).toEqual({
+      barcode: '4801234567890',
+      name: 'Sardines',
+      brand: 'Local Brand',
+      quantity: '155 g',
+      imageUrl: null,
+      priceCentavos: null,
+      source: 'manual',
+      updatedAt: '2026-08-10T00:00:00.000Z',
+    });
+  });
+
   it('expires catalog data so product details can be refreshed periodically', () => {
     const document = buildCatalogDocument(lookup, '2026-01-01T00:00:00.000Z');
     expect(isCatalogDocumentStale(document, new Date('2026-02-15T00:00:00.000Z'))).toBe(true);

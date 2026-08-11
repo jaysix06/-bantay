@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { ProductImage } from '@/components/product-image';
 import { formatPrice, parseProductTimestamp, type ProductDraft } from '@/domain/product';
 import { useAppTheme } from '@/theme/theme-provider';
 
@@ -32,13 +33,7 @@ export function PriceLabel({ product }: { product: ProductDraft }) {
       accessibilityLabel={`${product.name}, ${hasPrice ? `store price ${displayedPrice}` : 'store price not set'}`}
       style={[
         styles.tag,
-        {
-          backgroundColor: theme.colors.priceLabel,
-          borderColor: theme.colors.priceLabelBorder,
-          boxShadow: theme.isDark
-            ? '0 16px 32px rgba(0, 0, 0, 0.42)'
-            : '0 16px 32px rgba(92, 48, 13, 0.18)',
-        },
+        { backgroundColor: theme.colors.priceLabel },
       ]}
     >
       <View
@@ -49,28 +44,32 @@ export function PriceLabel({ product }: { product: ProductDraft }) {
         pointerEvents="none"
         style={[styles.cornerCut, styles.cornerCutRight, { backgroundColor: theme.colors.background }]}
       />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.tagHole,
-          { backgroundColor: theme.colors.background, borderColor: theme.colors.priceLabelBorder },
-        ]}
-      />
+      <View pointerEvents="none" style={styles.tagHolePositioner}>
+        <View
+          style={[
+            styles.tagHole,
+            { backgroundColor: theme.colors.background, borderColor: theme.colors.priceLabelBorder },
+          ]}
+        />
+      </View>
 
-      <View style={styles.productBlock}>
-        {product.brand ? (
-          <Text selectable numberOfLines={2} style={[styles.brand, { color: theme.colors.onPrimary }]}>
-            {product.brand.toLocaleUpperCase('en-PH')}
+      <View style={styles.productHeader}>
+        <View style={styles.productBlock}>
+          {product.brand ? (
+            <Text selectable numberOfLines={2} style={[styles.brand, { color: theme.colors.onPrimary }]}>
+              {product.brand.toLocaleUpperCase('en-PH')}
+            </Text>
+          ) : null}
+          <Text selectable numberOfLines={2} style={[styles.name, { color: theme.colors.onPrimary }]}>
+            {product.name}
           </Text>
-        ) : null}
-        <Text selectable numberOfLines={2} style={[styles.name, { color: theme.colors.onPrimary }]}>
-          {product.name}
-        </Text>
-        {product.quantity ? (
-          <Text selectable style={[styles.quantity, { color: detailColor }]}>
-            {product.quantity}
-          </Text>
-        ) : null}
+          {product.quantity ? (
+            <Text selectable style={[styles.quantity, { color: detailColor }]}>
+              {product.quantity}
+            </Text>
+          ) : null}
+        </View>
+        <ProductImage imageUrl={product.imageUrl} productName={product.name} variant="tag" />
       </View>
 
       <View style={[styles.divider, { borderColor: 'rgba(91, 51, 24, 0.34)' }]} />
@@ -108,7 +107,9 @@ export function PriceLabel({ product }: { product: ProductDraft }) {
         </View>
         <View style={[styles.timestampDivider, { backgroundColor: theme.colors.border }]} />
         <View style={styles.updatedRow}>
-          <MaterialCommunityIcons name="clock-outline" size={17} color={stripText} />
+          <View style={styles.updatedIcon}>
+            <MaterialCommunityIcons name="clock-outline" size={16} color={stripText} />
+          </View>
           <Text selectable style={[styles.updated, { color: stripText }]}>
             {hasPrice ? 'Price updated' : 'Catalog checked'} {updated}
             {usesOpenFoodFacts && hasPrice ? ' · Data: Open Food Facts' : ''}
@@ -123,28 +124,40 @@ const styles = StyleSheet.create({
   tag: {
     position: 'relative',
     gap: 12,
-    borderWidth: 2,
-    borderRadius: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     borderCurve: 'continuous',
     paddingHorizontal: 24,
     paddingTop: 88,
     paddingBottom: 12,
     overflow: 'hidden',
   },
-  cornerCut: { position: 'absolute', top: -26, width: 58, height: 58, transform: [{ rotate: '45deg' }] },
+  cornerCut: {
+    position: 'absolute',
+    top: -30,
+    zIndex: 2,
+    width: 58,
+    height: 58,
+    transform: [{ rotate: '45deg' }],
+  },
   cornerCutLeft: { left: -30 },
   cornerCutRight: { right: -30 },
-  tagHole: {
+  tagHolePositioner: {
     position: 'absolute',
     top: 22,
-    left: '50%',
+    left: 0,
+    right: 0,
+    zIndex: 4,
+    alignItems: 'center',
+  },
+  tagHole: {
     width: 38,
     height: 38,
-    marginLeft: -19,
     borderWidth: 1.5,
     borderRadius: 19,
   },
-  productBlock: { gap: 2 },
+  productHeader: { minHeight: 128, flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  productBlock: { flex: 1, gap: 2, paddingTop: 8 },
   brand: { fontFamily: 'Montserrat_800ExtraBold', fontSize: 22, lineHeight: 27 },
   name: { fontFamily: 'Montserrat_700Bold', fontSize: 18, lineHeight: 24 },
   quantity: { fontFamily: 'Montserrat_500Medium', fontSize: 17, lineHeight: 24 },
@@ -166,6 +179,14 @@ const styles = StyleSheet.create({
   sourceDivider: { width: 1, height: 28, marginHorizontal: 4 },
   source: { flexShrink: 1, fontFamily: 'Montserrat_500Medium', fontSize: 11 },
   timestampDivider: { height: StyleSheet.hairlineWidth },
-  updatedRow: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 10 },
-  updated: { fontFamily: 'Montserrat_500Medium', fontSize: 11, textAlign: 'center' },
+  updatedRow: {
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingHorizontal: 10,
+  },
+  updatedIcon: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center', transform: [{ translateY: -1 }] },
+  updated: { flexShrink: 1, fontFamily: 'Montserrat_500Medium', fontSize: 11, lineHeight: 16, textAlign: 'center' },
 });

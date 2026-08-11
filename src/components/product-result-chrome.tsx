@@ -4,7 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/theme-provider';
 
-export function ProductResultHeader({ onMenuPress }: { onMenuPress: () => void }) {
+export function ProductResultHeader({ onBackPress }: { onBackPress: () => void }) {
   const theme = useAppTheme();
   return (
     <View style={styles.header}>
@@ -12,10 +12,10 @@ export function ProductResultHeader({ onMenuPress }: { onMenuPress: () => void }
         accessibilityRole="button"
         accessibilityLabel="Return to the scanner"
         hitSlop={8}
-        onPress={onMenuPress}
-        style={({ pressed }) => [styles.menuButton, pressed && styles.pressed]}
+        onPress={onBackPress}
+        style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
       >
-        <MaterialCommunityIcons name="menu" size={32} color={theme.colors.text} />
+        <MaterialCommunityIcons name="arrow-left" size={30} color={theme.colors.text} />
       </Pressable>
       <Image source={require('../../assets/images/mascot-transparent.png')} style={styles.mascot} />
       <View style={styles.brandCopy}>
@@ -60,7 +60,7 @@ export function ProductResultAction({
 
 const styles = StyleSheet.create({
   header: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  menuButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  backButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   mascot: { width: 72, height: 72, resizeMode: 'contain' },
   brandCopy: { flex: 1, gap: 1 },
   brandName: { fontFamily: 'Montserrat_800ExtraBold', fontSize: 22, letterSpacing: 0.4 },

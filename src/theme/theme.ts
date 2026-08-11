@@ -1,5 +1,3 @@
-import { useColorScheme } from 'react-native';
-
 export type AppTheme = {
   isDark: boolean;
   colors: {
@@ -69,7 +67,6 @@ const darkTheme: AppTheme = {
   },
 };
 
-export function useSystemTheme(): AppTheme {
-  const colorScheme = useColorScheme();
-  return colorScheme === 'dark' ? darkTheme : lightTheme;
+export function getAppTheme(isDark: boolean): AppTheme {
+  return isDark ? darkTheme : lightTheme;
 }

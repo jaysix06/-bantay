@@ -4,16 +4,20 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAuth } from '@/auth/auth-provider';
 import { AppButton } from '@/components/app-button';
 import { PriceLabel } from '@/components/price-label';
-import { ProductImage } from '@/components/product-image';
 import { ProductResultAction, ProductResultHeader } from '@/components/product-result-chrome';
 import { ScreenState } from '@/components/screen-state';
-import { cacheCatalogProduct, findCachedCatalogProduct } from '@/data/catalog-repository';
+import { cacheCatalogProduct } from '@/data/catalog-repository';
+import { fetchCloudProduct, saveCloudProductLocally } from '@/data/cloud-product-repository';
 import { fetchProductFromOpenFoodFacts } from '@/data/open-food-facts';
-import { findProductByBarcode } from '@/data/product-repository';
+import { findCatalogProductByBarcode, findProductByBarcode } from '@/data/product-repository';
+import { submitPriceRequest } from '@/data/price-request-repository';
 import { normalizeBarcode, type Product, type ProductDraft } from '@/domain/product';
 import { useAppTheme } from '@/theme/theme-provider';
+
+import { returnFromProductResult } from './navigation';
 
 type LookupState =
   | { status: 'loading' }
@@ -28,14 +32,18 @@ export function ProductResultScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const db = useSQLiteContext();
+  const { membership, syncRevision, user } = useAuth();
   const params = useLocalSearchParams<{ barcode: string }>();
   const barcode = normalizeBarcode(params.barcode ?? '');
   const [state, setState] = useState<LookupState>(
     barcode ? { status: 'loading' } : { status: 'invalid' },
   );
   const [retryKey, setRetryKey] = useState(0);
+  const [requestState, setRequestState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const returnToPreviousScreen = () => returnFromProductResult(router);
 
   useEffect(() => {
+    void syncRevision;
     if (!barcode) {
       return;
     }
@@ -44,10 +52,10 @@ export function ProductResultScreen() {
     const controller = new AbortController();
 
     async function lookup() {
-      let hasStaleCachedProduct = false;
+      if (!membership) return;
       let local: Product | null;
       try {
-        local = await findProductByBarcode(db, validBarcode);
+        local = await findProductByBarcode(db, membership.storeId, validBarcode);
       } catch {
         if (!controller.signal.aborted) setState({ status: 'error', barcode: validBarcode });
         return;
@@ -57,29 +65,41 @@ export function ProductResultScreen() {
         return;
       }
 
+      const localCatalog = await findCatalogProductByBarcode(db, validBarcode).catch(() => null);
+
       try {
-        const cached = await findCachedCatalogProduct(validBarcode);
-        if (cached) {
-          setState({ status: 'external', product: cached.product });
-          if (!cached.isStale) return;
-          hasStaleCachedProduct = true;
+        const cloud = await fetchCloudProduct(membership.storeId, validBarcode);
+        if (cloud.catalog) await saveCloudProductLocally(db, membership.storeId, cloud);
+        if (cloud.product) {
+          setState({ status: 'found', product: cloud.product });
+          return;
+        }
+        if (cloud.catalog) {
+          setState({ status: 'external', product: cloud.catalog });
+          return;
         }
       } catch {
-        // A cloud cache miss must never block the direct catalog fallback.
+        if (localCatalog) {
+          setState({ status: 'external', product: localCatalog });
+          return;
+        }
+      }
+
+      if (localCatalog) {
+        setState({ status: 'external', product: localCatalog });
+        return;
       }
 
       try {
         const lookup = await fetchProductFromOpenFoodFacts(validBarcode, controller.signal);
         if (lookup) {
           setState({ status: 'external', product: lookup.product });
-          void cacheCatalogProduct(lookup).catch(() => undefined);
+          if (user) void cacheCatalogProduct(db, lookup, user.uid).catch(() => undefined);
         } else {
-          if (!hasStaleCachedProduct) {
-            setState({ status: 'missing', barcode: validBarcode, offline: false });
-          }
+          setState({ status: 'missing', barcode: validBarcode, offline: false });
         }
       } catch {
-        if (!controller.signal.aborted && !hasStaleCachedProduct) {
+        if (!controller.signal.aborted) {
           setState({ status: 'missing', barcode: validBarcode, offline: true });
         }
       }
@@ -87,7 +107,7 @@ export function ProductResultScreen() {
 
     void lookup();
     return () => controller.abort();
-  }, [barcode, db, retryKey]);
+  }, [barcode, db, membership, retryKey, syncRevision, user]);
 
   const openProductForm = (product: ProductDraft, mode: 'create' | 'edit' = 'create') => {
     router.push({
@@ -104,6 +124,41 @@ export function ProductResultScreen() {
         mode,
       },
     });
+  };
+
+  const askOwner = async (product: ProductDraft) => {
+    if (!user || membership?.role !== 'bantay') return;
+    setRequestState('sending');
+    try {
+      await submitPriceRequest(membership.storeId, user.uid, product);
+      setRequestState('sent');
+    } catch {
+      setRequestState('error');
+    }
+  };
+
+  const requestAction = (product: ProductDraft) => {
+    if (membership?.role !== 'bantay') return null;
+    if (requestState === 'sent') {
+      return (
+        <View accessibilityLiveRegion="polite" style={[styles.requestStatus, { backgroundColor: theme.colors.surfaceMuted }]}>
+          <Text style={[styles.requestTitle, { color: theme.colors.text }]}>Request sent</Text>
+          <Text style={[styles.requestBody, { color: theme.colors.textMuted }]}>The owner only needs to answer once. This price will update for every linked Bantay.</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.requestAction}>
+        <AppButton
+          disabled={requestState === 'sending'}
+          label={requestState === 'sending' ? 'Sending request…' : requestState === 'error' ? 'Try asking again' : 'Ask the owner'}
+          onPress={() => void askOwner(product)}
+        />
+        {requestState === 'error' ? (
+          <Text accessibilityRole="alert" style={[styles.requestError, { color: theme.colors.error }]}>Connect to the internet and try again. Saved prices still work offline.</Text>
+        ) : null}
+      </View>
+    );
   };
 
   if (state.status === 'loading') {
@@ -169,8 +224,11 @@ export function ProductResultScreen() {
             : 'This barcode is not in your store catalog or Open Food Facts.'
         }
       >
-        <AppButton label="Save product and price" onPress={() => openProductForm(draft)} />
-        <AppButton label="Scan another" variant="secondary" onPress={() => router.replace('/(tabs)')} />
+        {membership?.role === 'owner' ? (
+          <AppButton label="Save product and price" onPress={() => openProductForm(draft)} />
+        ) : null}
+        {requestAction(draft)}
+        <AppButton label="Scan another" variant="secondary" onPress={() => router.replace('/scan')} />
       </ScreenState>
     );
   }
@@ -185,15 +243,17 @@ export function ProductResultScreen() {
             { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 },
           ]}
         >
-          <ProductResultHeader onMenuPress={() => router.replace('/(tabs)')} />
-          <ProductImage imageUrl={state.product.imageUrl} productName={state.product.name} />
+          <ProductResultHeader onBackPress={returnToPreviousScreen} />
           <PriceLabel product={state.product} />
-          <AppButton label="Set store price" onPress={() => openProductForm(state.product)} />
+          {membership?.role === 'owner' ? (
+            <AppButton label="Set store price" onPress={() => openProductForm(state.product)} />
+          ) : null}
+          {requestAction(state.product)}
           <ProductResultAction
             icon="barcode-scan"
             title="Scan another"
             subtitle="Use the camera to scan a barcode"
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.replace('/scan')}
           />
         </ScrollView>
       </>
@@ -209,15 +269,14 @@ export function ProductResultScreen() {
           { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 },
         ]}
       >
-        <ProductResultHeader onMenuPress={() => router.replace('/(tabs)')} />
-        <ProductImage imageUrl={state.product.imageUrl} productName={state.product.name} />
+        <ProductResultHeader onBackPress={returnToPreviousScreen} />
         <PriceLabel product={state.product} />
         <View style={styles.actions}>
         <ProductResultAction
           icon="barcode-scan"
           title="Scan another"
           subtitle="Use the camera to scan a barcode"
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => router.replace('/scan')}
         />
         <ProductResultAction
           icon="magnify"
@@ -225,16 +284,18 @@ export function ProductResultScreen() {
           subtitle="Find products by name"
           onPress={() => router.replace('/search')}
         />
-        <AppButton
-          label="Edit saved price"
-          variant="text"
-          onPress={() =>
-            openProductForm(
-              { ...state.product, priceCentavos: state.product.priceCentavos },
-              'edit',
-            )
-          }
-        />
+        {membership?.role === 'owner' ? (
+          <AppButton
+            label="Edit saved price"
+            variant="text"
+            onPress={() =>
+              openProductForm(
+                { ...state.product, priceCentavos: state.product.priceCentavos },
+                'edit',
+              )
+            }
+          />
+        ) : null}
         </View>
       </ScrollView>
     </>
@@ -253,4 +314,9 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 },
   loadingText: { fontFamily: 'Montserrat_600SemiBold', fontSize: 15 },
   actions: { gap: 0 },
+  requestAction: { gap: 10 },
+  requestStatus: { gap: 5, borderRadius: 14, padding: 16 },
+  requestTitle: { fontFamily: 'Montserrat_700Bold', fontSize: 15 },
+  requestBody: { fontFamily: 'Montserrat_500Medium', fontSize: 12, lineHeight: 18 },
+  requestError: { fontFamily: 'Montserrat_600SemiBold', fontSize: 12, lineHeight: 18 },
 });
